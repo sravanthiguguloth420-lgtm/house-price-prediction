@@ -1,0 +1,262 @@
+<<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>House Price Prediction</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #dbeafe, #eff6ff);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1d4ed8;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 7px;
+            font-weight: bold;
+            color: #334155;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: 2px solid #93c5fd;
+            border-color: #2563eb;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 14px;
+            border: none;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: wait;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            overflow-wrap: anywhere;
+        }
+
+        .success {
+            display: block !important;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .error {
+            display: block !important;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .note {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>House Price Prediction</h1>
+
+        <p class="subtitle">
+            Enter house details to estimate its price
+        </p>
+
+        <form id="predictionForm">
+
+            <label for="area">Area (square feet)</label>
+            <input
+                type="number"
+                id="area"
+                name="area"
+                min="1"
+                step="any"
+                placeholder="Example: 1500"
+                required
+            >
+
+            <label for="bedrooms">Number of Bedrooms</label>
+            <input
+                type="number"
+                id="bedrooms"
+                name="bedrooms"
+                min="1"
+                step="1"
+                placeholder="Example: 3"
+                required
+            >
+
+            <label for="bathrooms">Number of Bathrooms</label>
+            <input
+                type="number"
+                id="bathrooms"
+                name="bathrooms"
+                min="1"
+                step="1"
+                placeholder="Example: 2"
+                required
+            >
+
+            <button type="submit" id="predictBtn">
+                Predict Price
+            </button>
+
+        </form>
+
+        <div id="result" role="status"></div>
+
+        <p class="note">
+            This is a machine learning demo. Actual prices may vary.
+        </p>
+
+    </div>
+
+    <script>
+        const form = document.getElementById("predictionForm");
+        const result = document.getElementById("result");
+        const button = document.getElementById("predictBtn");
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            result.className = "";
+            result.style.display = "none";
+            result.textContent = "";
+
+            const area = Number(document.getElementById("area").value);
+            const bedrooms = Number(
+                document.getElementById("bedrooms").value
+            );
+            const bathrooms = Number(
+                document.getElementById("bathrooms").value
+            );
+
+            if (
+                !Number.isFinite(area) ||
+                !Number.isInteger(bedrooms) ||
+                !Number.isInteger(bathrooms) ||
+                area <= 0 ||
+                bedrooms <= 0 ||
+                bathrooms <= 0
+            ) {
+                result.textContent =
+                    "Please enter valid positive values.";
+                result.className = "error";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("area", area);
+            formData.append("bedrooms", bedrooms);
+            formData.append("bathrooms", bathrooms);
+
+            button.disabled = true;
+            button.textContent = "Predicting...";
+
+            try {
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.detail || "Prediction failed."
+                    );
+                }
+
+                const price = Number(data.predicted_price);
+
+                if (!Number.isFinite(price)) {
+                    throw new Error("Invalid prediction received.");
+                }
+
+                result.textContent =
+                    "Estimated House Price: " +
+                    price.toLocaleString("en-IN", {
+                        maximumFractionDigits: 2
+                    });
+
+                result.className = "success";
+
+            } catch (error) {
+                result.textContent =
+                    "Error: " + error.message +
+                    ". Please check whether the FastAPI server is running.";
+
+                result.className = "error";
+
+            } finally {
+                button.disabled = false;
+                button.textContent = "Predict Price";
+            }
+        });
+    </script>
+
+</body>
+</html>
